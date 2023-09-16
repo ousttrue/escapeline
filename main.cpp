@@ -10,12 +10,16 @@ int main(int argc, char **argv) {
             << "cols: " << size.Col << std::endl;
 
   // spwawn
-  el::Pty pty;
-  if (!pty.Spawn(size)) {
+  auto pty = el::Pty::Create(size);
+  if (!pty) {
     return 1;
   }
 
   // loop
+  while (pty->IsAlive()) {
+    //
+
+  }
 
   return 0;
 }
