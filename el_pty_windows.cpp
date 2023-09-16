@@ -1,15 +1,18 @@
 #include "el_pty.h"
 #include <Windows.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <fileapi.h>
+#include <io.h>
 #include <iostream>
 #include <processthreadsapi.h>
 #include <string>
 
-HRESULT PrepareStartupInformation(HPCON hpc, STARTUPINFOEX *psi) {
+HRESULT PrepareStartupInformation(HPCON hpc, STARTUPINFOEXW *psi) {
   // Prepare Startup Information structure
-  STARTUPINFOEX si;
+  STARTUPINFOEXW si;
   ZeroMemory(&si, sizeof(si));
-  si.StartupInfo.cb = sizeof(STARTUPINFOEX);
+  si.StartupInfo.cb = sizeof(si);
 
   // Discover the size required for the list
   size_t bytesRequired;
@@ -48,11 +51,13 @@ struct PtyImpl {
   // pty
   HPCON Console = 0;
   HANDLE ReadPipe = 0;
+  int ReadPipeFile = 0;
   HANDLE WritePipe = 0;
+  int WritePipeFile = 0;
 
   // child process
-  STARTUPINFOEXA Startup = {};
-  std::string Cmd = "C:\\windows\\system32\\cmd.exe";
+  STARTUPINFOEXW Startup = {};
+  std::wstring Cmd = L"C:\\windows\\system32\\cmd.exe";
 
   bool Create(const COORD &size) {
 
@@ -91,10 +96,23 @@ struct PtyImpl {
     }
 
     assert(this->Console);
+
     return true;
   }
 
-  bool Fork(const std::string &cmd) {
+  int GetReadPipeFile() {
+    ReadPipeFile = _open_osfhandle((intptr_t)ReadPipe, _O_RDONLY);
+    ReadPipe = 0;
+    return ReadPipeFile;
+  }
+
+  int GetWritePipeFile() {
+    WritePipeFile = _open_osfhandle((intptr_t)WritePipe, _O_WRONLY);
+    WritePipe = 0;
+    return WritePipeFile;
+  }
+
+  bool Fork(const std::wstring &cmd) {
     Cmd = cmd;
     auto hr = PrepareStartupInformation(Console, &Startup);
     if (FAILED(hr)) {
@@ -103,11 +121,12 @@ struct PtyImpl {
 
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(pi));
-    if (!CreateProcessA(NULL, Cmd.data(), NULL, NULL, FALSE,
+    if (!CreateProcessW(NULL, Cmd.data(), NULL, NULL, FALSE,
                         EXTENDED_STARTUPINFO_PRESENT, NULL, NULL,
                         &Startup.StartupInfo, &pi)) {
       return HRESULT_FROM_WIN32(GetLastError());
     }
+
     return true;
   }
 };
@@ -129,12 +148,13 @@ std::shared_ptr<Pty> Pty::Create(const RowCol &size) {
   return ptr;
 }
 
+int Pty::ReadFile() const { return m_impl->GetReadPipeFile(); }
+int Pty::WriteFile() const { return m_impl->GetWritePipeFile(); }
+
 bool Pty::ForkDefault() {
   // TODO: COMSPEC
-  auto cmd = "C:\\windows\\system32\\cmd.exe";
+  auto cmd = L"C:\\windows\\system32\\cmd.exe";
   return m_impl->Fork(cmd);
 }
-
-bool Pty::IsAlive() const { return false; }
 
 } // namespace el

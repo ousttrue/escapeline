@@ -19,10 +19,11 @@ else
 endif
 
 lua_dep = dependency('lua', default_options: ['default_library=static'])
+uv_dep = dependency('libuv', default_options: ['default_library=static'])
 
 executable(
     'el',
     srcs,
     install: true,
-    dependencies: [lua_dep],
+    dependencies: [lua_dep, uv_dep],
 )

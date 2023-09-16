@@ -16,10 +16,9 @@ public:
   ~Pty();
 
   static std::shared_ptr<Pty> Create(const RowCol &size);
-
+  int ReadFile() const;
+  int WriteFile() const;
   bool ForkDefault();
-
-  bool IsAlive() const;
 };
 
 } // namespace el

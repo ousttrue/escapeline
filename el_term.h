@@ -4,5 +4,7 @@
 namespace el {
 
 RowCol GetTermSize();
+int Stdout();
+int Stdin();
 
 } // namespace el
