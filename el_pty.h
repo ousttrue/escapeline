@@ -16,6 +16,9 @@ public:
   ~Pty();
 
   static std::shared_ptr<Pty> Create(const RowCol &size);
+
+  bool ForkDefault();
+
   bool IsAlive() const;
 };
 

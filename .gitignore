@@ -1,5 +1,6 @@
 /prefix/
 /builddir/
-
-
+/subprojects/*
+!/subprojects/packagefiles/
+!/subprojects/lua.wrap
 
