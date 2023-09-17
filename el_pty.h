@@ -1,6 +1,8 @@
 #pragma once
 #include "el_types.h"
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace el {
 
@@ -19,6 +21,7 @@ public:
   int ReadFile() const;
   int WriteFile() const;
   bool ForkDefault();
+  bool Fork(const std::vector<std::string> &args);
 };
 
 } // namespace el

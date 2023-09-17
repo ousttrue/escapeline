@@ -4,4 +4,4 @@
 !/subprojects/packagefiles/
 !/subprojects/lua.wrap
 !/subprojects/libuv.wrap
-
+!/subprojects/cxxopts.wrap

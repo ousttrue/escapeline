@@ -1,6 +1,7 @@
 #include "el_pty.h"
 #include "el_term.h"
 #include <cwchar>
+#include <cxxopts.hpp>
 #include <iostream>
 #include <lua.hpp>
 #include <memory>
@@ -57,7 +58,7 @@ void write_data(uv_stream_t *dest, size_t size, uv_buf_t buf, uv_write_cb cb) {
   uv_write((uv_write_t *)req, (uv_stream_t *)dest, &req->buf, 1, cb);
 }
 
-int main(int argc, char **argv) {
+int Run(const cxxopts::ParseResult &result) {
   el::SetupTerm();
 
   // get termsize
@@ -74,15 +75,22 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // spwawn
-  if (!g_pty->ForkDefault()) {
-    return 2;
+  Lua lua;
+  auto lua_file = result["lua"].as<std::string>();
+  if (lua_file.size() > 0) {
+    lua.Dofile(lua_file.c_str());
   }
 
-  // Lua lua;
-  // if (argc > 1) {
-  //   lua.Dofile(argv[1]);
-  // }
+  // spwawn
+  if (result.unmatched().size() > 0) {
+    if (!g_pty->Fork(result.unmatched())) {
+      return 2;
+    }
+  } else {
+    if (!g_pty->ForkDefault()) {
+      return 2;
+    }
+  }
 
   // status line !
   printf("\033[%d,%dr", 0, size.Row);
@@ -118,30 +126,51 @@ int main(int argc, char **argv) {
   uv_tty_init(uv_default_loop(), &tty_out, el::Stdout(), 0);
   uv_tty_set_mode(&tty_out, UV_TTY_MODE_NORMAL);
 
-  uv_read_start((uv_stream_t *)&ptyout_pipe, &alloc_buffer,
-                [](uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
-                  if (nread < 0) {
-                    if (nread == UV_EOF) {
-                      // end of file
-                      uv_close((uv_handle_t *)&ptyout_pipe, NULL);
-                    }
-                  } else if (nread > 0) {
-                    write_data((uv_stream_t *)&tty_out, nread, *buf,
-                               [](uv_write_t *req, int status) {
-                               free_write_req(req); });
-                    // DWORD size;
-                    // WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf->base,
-                    //               nread, &size, 0);
-                  }
+  uv_read_start(
+      (uv_stream_t *)&ptyout_pipe, &alloc_buffer,
+      [](uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
+        if (nread < 0) {
+          if (nread == UV_EOF) {
+            // end of file
+            uv_close((uv_handle_t *)&ptyout_pipe, NULL);
+          }
+        } else if (nread > 0) {
+          write_data((uv_stream_t *)&tty_out, nread, *buf,
+                     [](uv_write_t *req, int status) { free_write_req(req); });
+          // DWORD size;
+          // WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf->base,
+          //               nread, &size, 0);
+        }
 
-                  // OK to free buffer as write_data copies it.
-                  if (buf->base)
-                    free(buf->base);
-                });
+        // OK to free buffer as write_data copies it.
+        if (buf->base)
+          free(buf->base);
+      });
 
   // TODO: resize event, signal, timer...
   uv_run(uv_default_loop(), UV_RUN_DEFAULT);
   uv_loop_close(uv_default_loop());
 
   return 0;
+}
+
+int main(int argc, char **argv) {
+  // escapeline --lua rc.lua -- cmd.exe ...
+  cxxopts::Options options("EscapeLine", "escape sequence status line");
+  options.add_options()
+      //
+      ("l,lua", "lua script", cxxopts::value<std::string>()->default_value(""))
+      // ( "v,verbose", "Verbose output",
+      // cxxopts::value<bool>()->default_value("false"))
+      ;
+  options.allow_unrecognised_options();
+
+  try {
+    auto result = options.parse(argc, argv);
+    return Run(result);
+  } catch (const cxxopts::exceptions::exception &ex) {
+    std::cerr << ex.what() << std::endl;
+    std::cout << options.help() << std::endl;
+    return -1;
+  }
 }

@@ -8,9 +8,9 @@
 #include <processthreadsapi.h>
 #include <string>
 
-HRESULT PrepareStartupInformation(HPCON hpc, STARTUPINFOEXW *psi) {
+HRESULT PrepareStartupInformation(HPCON hpc, STARTUPINFOEXA *psi) {
   // Prepare Startup Information structure
-  STARTUPINFOEXW si;
+  STARTUPINFOEXA si;
   ZeroMemory(&si, sizeof(si));
   si.StartupInfo.cb = sizeof(si);
 
@@ -56,8 +56,8 @@ struct PtyImpl {
   int WritePipeFile = 0;
 
   // child process
-  STARTUPINFOEXW Startup = {};
-  std::wstring Cmd = L"C:\\windows\\system32\\cmd.exe";
+  STARTUPINFOEXA Startup = {};
+  std::string Cmd;
 
   bool Create(const COORD &size) {
 
@@ -112,8 +112,17 @@ struct PtyImpl {
     return WritePipeFile;
   }
 
-  bool Fork(const std::wstring &cmd) {
-    Cmd = cmd;
+  bool Fork(const std::vector<std::string> &args) {
+    if (args.empty()) {
+      return false;
+    }
+    Cmd = args[0];
+    for (int i = 1; i < args.size(); ++i) {
+      Cmd += " ";
+      Cmd += args[i];
+    }
+    std::cout << "launch: " << Cmd << std::endl;
+
     auto hr = PrepareStartupInformation(Console, &Startup);
     if (FAILED(hr)) {
       return false;
@@ -121,7 +130,7 @@ struct PtyImpl {
 
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(pi));
-    if (!CreateProcessW(NULL, Cmd.data(), NULL, NULL, FALSE,
+    if (!CreateProcessA(NULL, Cmd.data(), NULL, NULL, FALSE,
                         EXTENDED_STARTUPINFO_PRESENT, NULL, NULL,
                         &Startup.StartupInfo, &pi)) {
       return HRESULT_FROM_WIN32(GetLastError());
@@ -151,10 +160,14 @@ std::shared_ptr<Pty> Pty::Create(const RowCol &size) {
 int Pty::ReadFile() const { return m_impl->GetReadPipeFile(); }
 int Pty::WriteFile() const { return m_impl->GetWritePipeFile(); }
 
+bool Pty::Fork(const std::vector<std::string> &args) {
+  return m_impl->Fork(args);
+}
+
 bool Pty::ForkDefault() {
   // TODO: COMSPEC
-  auto cmd = L"C:\\windows\\system32\\cmd.exe";
-  return m_impl->Fork(cmd);
+  std::vector<std::string> args{"C:\\windows\\system32\\cmd.exe"};
+  return Fork(args);
 }
 
 } // namespace el

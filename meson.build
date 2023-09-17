@@ -20,10 +20,11 @@ endif
 
 lua_dep = dependency('lua', default_options: ['default_library=static'])
 uv_dep = dependency('libuv', default_options: ['default_library=static'])
+cxxopts_dep = dependency('cxxopts')
 
 executable(
     'el',
     srcs,
     install: true,
-    dependencies: [lua_dep, uv_dep],
+    dependencies: [lua_dep, uv_dep, cxxopts_dep],
 )
