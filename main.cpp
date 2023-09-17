@@ -58,13 +58,15 @@ void write_data(uv_stream_t *dest, size_t size, uv_buf_t buf, uv_write_cb cb) {
 }
 
 int main(int argc, char **argv) {
+  el::SetupTerm();
+
   // get termsize
   auto size = el::GetTermSize();
   // std::cout << "rows: " << size.Row << ", "
   //           << "cols: " << size.Col << std::endl;
 
   // status line !
-  size.Row -= 1;
+  size.Row -= 2;
 
   // pty
   g_pty = el::Pty::Create(size);
@@ -97,7 +99,7 @@ int main(int argc, char **argv) {
         if (nread < 0) {
           if (nread == UV_EOF) {
             // end of file
-            // uv_close((uv_handle_t *)&tty, NULL);
+            uv_close((uv_handle_t *)&tty_in, NULL);
           }
         } else if (nread > 0) {
           write_data((uv_stream_t *)&ptyin_pipe, nread, *buf,
@@ -114,24 +116,28 @@ int main(int argc, char **argv) {
   uv_pipe_init(uv_default_loop(), &ptyout_pipe, 0);
   uv_pipe_open(&ptyout_pipe, g_pty->ReadFile());
   uv_tty_init(uv_default_loop(), &tty_out, el::Stdout(), 0);
+  uv_tty_set_mode(&tty_out, UV_TTY_MODE_NORMAL);
 
-  uv_read_start(
-      (uv_stream_t *)&ptyout_pipe, &alloc_buffer,
-      [](uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
-        if (nread < 0) {
-          if (nread == UV_EOF) {
-            // end of file
-            // uv_close((uv_handle_t *)&ptyout_pipe, NULL);
-          }
-        } else if (nread > 0) {
-          write_data((uv_stream_t *)&tty_out, nread, *buf,
-                     [](uv_write_t *req, int status) { free_write_req(req); });
-        }
+  uv_read_start((uv_stream_t *)&ptyout_pipe, &alloc_buffer,
+                [](uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
+                  if (nread < 0) {
+                    if (nread == UV_EOF) {
+                      // end of file
+                      uv_close((uv_handle_t *)&ptyout_pipe, NULL);
+                    }
+                  } else if (nread > 0) {
+                    write_data((uv_stream_t *)&tty_out, nread, *buf,
+                               [](uv_write_t *req, int status) {
+                               free_write_req(req); });
+                    // DWORD size;
+                    // WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf->base,
+                    //               nread, &size, 0);
+                  }
 
-        // OK to free buffer as write_data copies it.
-        if (buf->base)
-          free(buf->base);
-      });
+                  // OK to free buffer as write_data copies it.
+                  if (buf->base)
+                    free(buf->base);
+                });
 
   // TODO: resize event, signal, timer...
   uv_run(uv_default_loop(), UV_RUN_DEFAULT);

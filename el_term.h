@@ -6,5 +6,6 @@ namespace el {
 RowCol GetTermSize();
 int Stdout();
 int Stdin();
+void SetupTerm();
 
 } // namespace el
