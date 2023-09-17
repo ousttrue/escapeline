@@ -22,6 +22,7 @@ public:
   int WriteFile() const;
   bool ForkDefault();
   bool Fork(const std::vector<std::string> &args);
+  void BlockProcess();
 };
 
 } // namespace el

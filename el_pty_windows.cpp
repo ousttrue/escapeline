@@ -8,6 +8,8 @@
 #include <processthreadsapi.h>
 #include <string>
 
+auto NEWLINE = "\n\r";
+
 HRESULT PrepareStartupInformation(HPCON hpc, STARTUPINFOEXA *psi) {
   // Prepare Startup Information structure
   STARTUPINFOEXA si;
@@ -58,12 +60,47 @@ struct PtyImpl {
   // child process
   STARTUPINFOEXA Startup = {};
   std::string Cmd;
+  PROCESS_INFORMATION Pi;
+
+  PtyImpl() {}
+
+  ~PtyImpl() {
+    if (ReadPipe) {
+      // std::cout << "CloseHandle ReadPipe" << NEWLINE;
+      CloseHandle(ReadPipe);
+      ReadPipe = 0;
+    }
+    if (ReadPipeFile) {
+      // std::cout << "_close ReadPipeFile" << NEWLINE;
+      _close(ReadPipeFile);
+      ReadPipeFile = 0;
+    }
+    if (WritePipe) {
+      // std::cout << "CloseHandle WritePipe" << NEWLINE;
+      CloseHandle(WritePipe);
+      WritePipe = 0;
+    }
+    if (WritePipeFile) {
+      // std::cout << "_close WritePipeFile" << NEWLINE;
+      _close(WritePipeFile);
+      WritePipeFile = 0;
+    }
+    if (Pi.hThread) {
+      // std::cout << "CloseHandle Pi.hThread" << NEWLINE;
+      CloseHandle(Pi.hThread);
+    }
+    if (Pi.hProcess) {
+      // std::cout << "CloseHandle Pi.hProcess" << NEWLINE;
+      CloseHandle(Pi.hProcess);
+    }
+    // std::cout << "released" << NEWLINE;
+  }
 
   bool Create(const COORD &size) {
 
     HANDLE inPipeRead{INVALID_HANDLE_VALUE};
     if (!CreatePipe(&inPipeRead, &WritePipe, NULL, 0)) {
-      std::cerr << "CreatePipe" << std::endl;
+      std::cerr << "CreatePipe" << NEWLINE;
       return {};
     }
 
@@ -71,7 +108,7 @@ struct PtyImpl {
     if (!CreatePipe(&this->ReadPipe, &outPipeWrite, NULL, 0)) {
       CloseHandle(inPipeRead);
       CloseHandle(this->WritePipe);
-      std::cerr << "CreatePipe" << std::endl;
+      std::cerr << "CreatePipe" << NEWLINE;
       return {};
     }
 
@@ -89,7 +126,7 @@ struct PtyImpl {
       CloseHandle(inPipeRead);
     }
     if (FAILED(hr)) {
-      std::cerr << "CreatePseudoConsole" << std::endl;
+      std::cerr << "CreatePseudoConsole" << NEWLINE;
       CloseHandle(this->WritePipe);
       CloseHandle(this->ReadPipe);
       return {};
@@ -121,22 +158,26 @@ struct PtyImpl {
       Cmd += " ";
       Cmd += args[i];
     }
-    std::cout << "launch: " << Cmd << std::endl;
+    std::cout << "launch: " << Cmd << NEWLINE;
 
     auto hr = PrepareStartupInformation(Console, &Startup);
     if (FAILED(hr)) {
       return false;
     }
 
-    PROCESS_INFORMATION pi;
-    ZeroMemory(&pi, sizeof(pi));
+    ZeroMemory(&Pi, sizeof(Pi));
     if (!CreateProcessA(NULL, Cmd.data(), NULL, NULL, FALSE,
                         EXTENDED_STARTUPINFO_PRESENT, NULL, NULL,
-                        &Startup.StartupInfo, &pi)) {
+                        &Startup.StartupInfo, &Pi)) {
       return HRESULT_FROM_WIN32(GetLastError());
     }
 
     return true;
+  }
+
+  void BlockProcess() {
+    WaitForSingleObject(Pi.hProcess, INFINITE);
+    std::cout << NEWLINE << "process: exited" << NEWLINE;
   }
 };
 
@@ -169,5 +210,7 @@ bool Pty::ForkDefault() {
   std::vector<std::string> args{"C:\\windows\\system32\\cmd.exe"};
   return Fork(args);
 }
+
+void Pty::BlockProcess() { m_impl->BlockProcess(); }
 
 } // namespace el

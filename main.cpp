@@ -95,6 +95,24 @@ int Run(const cxxopts::ParseResult &result) {
   // status line !
   printf("\033[%d,%dr", 0, size.Row);
 
+  uv_work_t work;
+  uv_queue_work(
+      uv_default_loop(), &work,
+      [](uv_work_t *req) {
+        // watch child process
+        g_pty->BlockProcess();
+      },
+      [](uv_work_t *req, int status) {
+        // stop loop
+        g_pty = nullptr;
+
+        uv_read_stop((uv_stream_t *)&ptyout_pipe);
+        // uv_close((uv_handle_t *)&tty_out, NULL);
+
+        uv_read_stop((uv_stream_t *)&tty_in);
+        // uv_close((uv_handle_t *)&ptyin_pipe, NULL);
+      });
+
   // stdin ==> ptyin,
   uv_tty_init(uv_default_loop(), &tty_in, el::Stdin(), 1);
   uv_tty_set_mode(&tty_in, UV_TTY_MODE_RAW);
