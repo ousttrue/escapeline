@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/prefix/bin/el.exe",
             "args": [
-                "${env:USERPROFILE}\\neovim\\bin\\nvim.exe",
+                // "${env:USERPROFILE}\\neovim\\bin\\nvim.exe",
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

@@ -27,6 +27,7 @@ public:
   RowCol Update();
   void Draw();
   std::span<char> Input(const char *buf, size_t len);
+  void Output(const char *buf, size_t len);
 };
 
 } // namespace el

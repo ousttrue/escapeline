@@ -148,6 +148,7 @@ int Run(const cxxopts::ParseResult &result) {
             uv_close((uv_handle_t *)&g_ptyout_pipe, NULL);
           }
         } else if (nread > 0) {
+          g_el.Output(buf->base, nread);
           write_data((uv_stream_t *)&g_tty_out, nread, buf->base,
                      [](uv_write_t *req, int status) { free_write_req(req); });
           g_el.Draw();
