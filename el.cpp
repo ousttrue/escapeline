@@ -14,8 +14,20 @@ RowCol EscapeLine::Update() {
   auto size = GetTermSize();
   m_current = size;
 
-  // DECSTBM
-  printf(ESC "[%d,%dr", 1, m_current.Row - m_height);
+  {
+    // uim-fep
+    printf(ESC "[s");
+    printf(ESC "[?25l");
+    // DECSTBM
+    printf(ESC "[%d,%dr", 1, m_current.Row - m_height);
+    // write
+    int row = m_current.Row - m_height + 1; // 1 origin
+    printf(ESC "[%d;%dH", row, 1);
+    printf(ESC "[0m"
+               "hello status line !");
+    printf(ESC "[u");
+    printf(ESC "[?25h");
+  }
 
   size.Row -= m_height;
   return size;
@@ -28,7 +40,6 @@ void EscapeLine::Draw() {
   // write
   int row = m_current.Row - m_height + 1; // 1 origin
   printf(ESC "[%d;%dH", row, 1);
-
   printf(ESC "[0m"
              "hello status line !");
 
@@ -41,11 +52,12 @@ std::span<char> EscapeLine::Input(const char *buf, size_t len) {
   return m_buf;
 }
 
-void EscapeLine::Output(const char *buf, size_t len) {
-  //
-  std::vector<char> tmp;
-  tmp.assign(buf, buf+len);
-  auto a = 0;
+std::span<char> EscapeLine::Output(const char *buf, size_t len) {
+  m_buf.assign(buf, buf + len);
+  // if (m_buf.size() == 1 && m_buf[0] == '\r') {
+  //   m_buf[0] = '\n';
+  // }
+  return m_buf;
 }
 
 } // namespace el
