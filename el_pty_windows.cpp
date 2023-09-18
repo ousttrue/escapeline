@@ -182,8 +182,8 @@ struct PtyImpl {
 
   void SetSize(const RowCol &size) {
     ResizePseudoConsole(Console, {
-                                     .X = size.Col,
-                                     .Y = size.Row,
+                                     .X = static_cast<short>(size.Col),
+                                     .Y = static_cast<short>(size.Row),
                                  });
   }
 };
@@ -196,8 +196,8 @@ std::shared_ptr<Pty> Pty::Create(const RowCol &size) {
   // pty
   auto ptr = std::shared_ptr<Pty>(new Pty);
   if (!ptr->m_impl->Create({
-          .X = size.Col,
-          .Y = size.Row,
+          .X = static_cast<short>(size.Col),
+          .Y = static_cast<short>(size.Row),
       })) {
     return {};
   }

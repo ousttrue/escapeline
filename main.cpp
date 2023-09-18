@@ -108,7 +108,7 @@ int Run(const cxxopts::ParseResult &result) {
 
   // stdin ==> ptyin,
   uv_tty_init(uv_default_loop(), &g_tty_in, el::Stdin(), 1);
-  // uv_tty_set_mode(&g_tty_in, UV_TTY_MODE_RAW);
+  uv_tty_set_mode(&g_tty_in, UV_TTY_MODE_RAW);
   uv_pipe_init(uv_default_loop(), &g_ptyin_pipe, 0);
   uv_pipe_open(&g_ptyin_pipe, g_pty->WriteFile());
 
