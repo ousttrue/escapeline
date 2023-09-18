@@ -18,16 +18,11 @@ RowCol EscapeLine::Update() {
   {
     // uim-fep
     printf(ESC "[s");
-    printf(ESC "[?25l");
+
     // DECSTBM
     printf(ESC "[%d;%dr", 1, m_current.Row - m_height);
-    // write
-    int row = m_current.Row - m_height + 1; // 1 origin
-    printf(ESC "[%d;%dH", row, 1);
-    printf(ESC "[0m"
-               "hello status line !");
+
     printf(ESC "[u");
-    printf(ESC "[?25h");
   }
 
   size.Row -= m_height;
@@ -36,11 +31,11 @@ RowCol EscapeLine::Update() {
 
 void EscapeLine::Draw() {
   // save
-  // printf(ESC "[s");
-  printf(ESC "7");
+  printf(ESC "[s");
+  printf(ESC "[?25l");
 
   // DECSTBM
-  // printf(ESC "[%d;%dr", 1, m_current.Row);
+  // printf(ESC "[r");
 
   // write
   int row = m_current.Row - m_height + 1; // 1 origin
@@ -52,12 +47,8 @@ void EscapeLine::Draw() {
   // printf(ESC "[%d;%dr", 1, m_current.Row - m_height);
 
   // restore
-  // printf(ESC "[u");
-  printf(ESC "8");
-
-  printf(ESC "7");
-  printf(ESC "[6,15r");
-  printf(ESC "8");
+  printf(ESC "[?25h");
+  printf(ESC "[u");
 }
 
 std::span<char> EscapeLine::Input(const char *buf, size_t len) {
