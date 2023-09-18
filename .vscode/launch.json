@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "lldb",
+            "request": "launch",
+            "name": "(Linux) LLDB",
+            "program": "${workspaceFolder}/prefix/bin/el",
+            "args": [
+                "-h", "1",
+            ],
+            "cwd": "${workspaceFolder}",
+            "terminal": "external",
+        },
+        {
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",

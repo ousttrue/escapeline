@@ -1,5 +1,6 @@
 #include "el.h"
 #include "el_term.h"
+#include <stdio.h>
 
 #define ESC "\033"
 

@@ -3,8 +3,8 @@
 namespace el {
 
 struct RowCol {
-  short Row;
-  short Col;
+  int Row;
+  int Col;
 };
 
 } // namespace el
