@@ -1,11 +1,8 @@
 #include "el.h"
 #include "el_pty.h"
 #include "el_term.h"
-#include <cwchar>
 #include <cxxopts.hpp>
 #include <iostream>
-#include <memory>
-#include <string>
 #include <uv.h>
 
 std::shared_ptr<el::Pty> g_pty;
@@ -132,7 +129,6 @@ int Run(const cxxopts::ParseResult &result) {
           auto data = g_el.Output(buf->base, nread);
           write_data((uv_stream_t *)&g_tty_out, data.size(), data.data(),
                      [](uv_write_t *req, int status) { free_write_req(req); });
-          g_el.Draw();
         }
 
         // OK to free buffer as write_data copies it.

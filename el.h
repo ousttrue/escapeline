@@ -30,7 +30,6 @@ public:
   //
   RowCol Initialize(int height, std::string_view lua_file);
   RowCol Update();
-  void Draw();
   std::span<char> Input(const char *buf, size_t len);
   std::span<char> Output(const char *buf, size_t len);
 };

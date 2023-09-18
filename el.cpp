@@ -1,5 +1,6 @@
 #include "el.h"
 #include "el_term.h"
+#include <assert.h>
 #include <stdio.h>
 #include <string>
 
@@ -17,74 +18,115 @@ public:
   Lua(const Lua &) = delete;
   Lua &operator=(const Lua &) = delete;
 
-  void Dofile(const std::string &file) {
-    //
+  void Dofile(std::string_view src) {
+    if (src.empty()) {
+      return;
+    }
+
+    std::string file;
+    if (src[0] == '~') {
+      // expand: ~
+      file += el::GetHome();
+      src = src.substr(1);
+    }
+    file += src;
+
+    // set global table el
+    auto top = lua_gettop(L);
+    lua_newtable(L);
+
+    // default: el.line_height=1
+    lua_pushinteger(L, 1);
+    lua_setfield(L, -2, "line_height");
+
+    lua_setglobal(L, "el");
+    assert(lua_gettop(L) == top);
+
     luaL_dofile(L, file.c_str());
   }
-};
 
-#define ESC "\033"
+  // set el[key] = value
+  void set(const char *key, int value) {
+    auto top = lua_gettop(L);
+    lua_getglobal(L, "el");
+    lua_pushinteger(L, value);
+    lua_setfield(L, -2, key);
+    lua_pop(L, 1);
+    assert(lua_gettop(L) == top);
+  }
+
+  int get_int(const char *key) {
+    auto top = lua_gettop(L);
+    lua_getglobal(L, "el");
+    lua_getfield(L, -1, key);
+    lua_remove(L, -2);
+    auto value = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    assert(lua_gettop(L) == top);
+    return value;
+  }
+
+  // call: el[func]()
+  void call(const char *func) {
+    auto top = lua_gettop(L);
+    lua_getglobal(L, "el");
+    lua_getfield(L, -1, func);
+    lua_remove(L, -2);
+    lua_call(L, 0, 0);
+    auto end = lua_gettop(L);
+    assert(end == top);
+  }
+
+  const char *call(const char *func, const char *buf, size_t len) {
+    auto top = lua_gettop(L);
+    lua_getglobal(L, "el");
+    auto field_type = lua_getfield(L, -1, func);
+    lua_remove(L, -2);
+    lua_pushlstring(L, buf, len);
+    if (field_type == LUA_TFUNCTION) {
+      lua_call(L, 1, 1);
+    }
+    auto value = lua_tostring(L, -1);
+    lua_pop(L, 1);
+    assert(lua_gettop(L) == top);
+    return value;
+  }
+};
 
 namespace el {
 
 struct EscapeLineImpl {
   Lua m_lua;
-  RowCol m_current = {0, 0};
-  int m_height = 1;
   std::vector<char> m_buf;
 
   RowCol Initialize(int height, std::string_view lua_file) {
-    m_height = height;
+    m_lua.Dofile(lua_file);
+
+    m_lua.set("line_height", height);
+
     return Update();
   }
 
   RowCol Update() {
     auto size = GetTermSize();
-    m_current = size;
+    m_lua.set("rows", size.Row);
+    m_lua.set("cols", size.Col);
 
-    {
-      // uim-fep
-      printf(ESC "[s");
+    m_lua.call("update");
 
-      // DECSTBM
-      printf(ESC "[%d;%dr", 1, m_current.Row - m_height);
-
-      printf(ESC "[u");
-    }
-
-    size.Row -= m_height;
+    size.Row -= m_lua.get_int("line_height");
     return size;
   }
 
-  void Draw() {
-    // save
-    printf(ESC "[s");
-    printf(ESC "[?25l");
-
-    // DECSTBM
-    // printf(ESC "[r");
-
-    // write
-    int row = m_current.Row - m_height + 1; // 1 origin
-    printf(ESC "[%d;%dH", row, 1);
-    printf(ESC "[0m"
-               "hello status line !");
-
-    // DECSTBM
-    // printf(ESC "[%d;%dr", 1, m_current.Row - m_height);
-
-    // restore
-    printf(ESC "[?25h");
-    printf(ESC "[u");
-  }
-
   std::span<char> Input(const char *buf, size_t len) {
-    m_buf.assign(buf, buf + len);
+    auto result = m_lua.call("input", buf, len);
+    m_buf.assign(result, result + strlen(result));
     return m_buf;
   }
 
   std::span<char> Output(const char *buf, size_t len) {
-    m_buf.assign(buf, buf + len);
+    auto result = m_lua.call("output", buf, len);
+    m_buf.assign(result, result + strlen(result));
     return m_buf;
   }
 };
@@ -98,8 +140,6 @@ RowCol EscapeLine::Initialize(int height, std::string_view lua_file) {
 }
 
 RowCol EscapeLine::Update() { return m_impl->Update(); }
-
-void EscapeLine::Draw() { m_impl->Draw(); }
 
 std::span<char> EscapeLine::Input(const char *buf, size_t len) {
   return m_impl->Input(buf, len);

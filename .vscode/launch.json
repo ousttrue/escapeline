@@ -10,7 +10,8 @@
             "name": "(Linux) LLDB",
             "program": "${workspaceFolder}/prefix/bin/el",
             "args": [
-                "-h", "1",
+                "-h",
+                "1",
             ],
             "cwd": "${workspaceFolder}",
             "terminal": "external",
@@ -22,6 +23,8 @@
             "program": "${workspaceFolder}/prefix/bin/el.exe",
             "args": [
                 // "${env:USERPROFILE}\\neovim\\bin\\nvim.exe",
+                "-l",
+                "example.lua",
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

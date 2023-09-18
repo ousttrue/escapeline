@@ -65,4 +65,12 @@ void SetupTerm() {
   }
 }
 
+std::string GetHome() {
+  char buf[256];
+  if (GetEnvironmentVariableA("USERPROFILE", buf, std::size(buf))) {
+    return buf;
+  }
+  return "";
+}
+
 } // namespace el
