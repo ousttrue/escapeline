@@ -4,29 +4,9 @@
 #include <cwchar>
 #include <cxxopts.hpp>
 #include <iostream>
-#include <lua.hpp>
 #include <memory>
 #include <string>
 #include <uv.h>
-
-extern "C" {
-#include <lauxlib.h>
-}
-
-class Lua {
-  lua_State *L;
-
-public:
-  Lua() : L(luaL_newstate()) { luaL_openlibs(L); }
-  ~Lua() { lua_close(L); }
-  Lua(const Lua &) = delete;
-  Lua &operator=(const Lua &) = delete;
-
-  void Dofile(const std::string &file) {
-    //
-    luaL_dofile(L, file.c_str());
-  }
-};
 
 std::shared_ptr<el::Pty> g_pty;
 
@@ -67,16 +47,17 @@ void write_data(uv_stream_t *dest, size_t size, const char *data,
 int Run(const cxxopts::ParseResult &result) {
   el::SetupTerm();
 
-  // pty
-  g_pty = el::Pty::Create(g_el.Initialize(result["height"].as<int>()));
-  if (!g_pty) {
-    return 1;
+  std::string lua_file = "~/.config/escapeline/config.lua";
+  auto lua_arg = result["lua"].as<std::string>();
+  if (lua_arg.size() > 0) {
+    lua_file = lua_arg;
   }
 
-  Lua lua;
-  auto lua_file = result["lua"].as<std::string>();
-  if (lua_file.size() > 0) {
-    lua.Dofile(lua_file.c_str());
+  // pty
+  g_pty =
+      el::Pty::Create(g_el.Initialize(result["height"].as<int>(), lua_file));
+  if (!g_pty) {
+    return 1;
   }
 
   // spwawn
