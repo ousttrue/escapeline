@@ -15,20 +15,20 @@ RowCol EscapeLine::Update() {
   auto size = GetTermSize();
   m_current = size;
 
-  // {
-  //   // uim-fep
-  //   printf(ESC "[s");
-  //   printf(ESC "[?25l");
-  //   // DECSTBM
-  //   printf(ESC "[%d,%dr", 1, m_current.Row - m_height);
-  //   // write
-  //   int row = m_current.Row - m_height + 1; // 1 origin
-  //   printf(ESC "[%d;%dH", row, 1);
-  //   printf(ESC "[0m"
-  //              "hello status line !");
-  //   printf(ESC "[u");
-  //   printf(ESC "[?25h");
-  // }
+  {
+    // uim-fep
+    printf(ESC "[s");
+    printf(ESC "[?25l");
+    // DECSTBM
+    printf(ESC "[%d;%dr", 1, m_current.Row - m_height);
+    // write
+    int row = m_current.Row - m_height + 1; // 1 origin
+    printf(ESC "[%d;%dH", row, 1);
+    printf(ESC "[0m"
+               "hello status line !");
+    printf(ESC "[u");
+    printf(ESC "[?25h");
+  }
 
   size.Row -= m_height;
   return size;
@@ -36,7 +36,11 @@ RowCol EscapeLine::Update() {
 
 void EscapeLine::Draw() {
   // save
-  printf(ESC "[s");
+  // printf(ESC "[s");
+  printf(ESC "7");
+
+  // DECSTBM
+  // printf(ESC "[%d;%dr", 1, m_current.Row);
 
   // write
   int row = m_current.Row - m_height + 1; // 1 origin
@@ -44,8 +48,16 @@ void EscapeLine::Draw() {
   printf(ESC "[0m"
              "hello status line !");
 
+  // DECSTBM
+  // printf(ESC "[%d;%dr", 1, m_current.Row - m_height);
+
   // restore
-  printf(ESC "[u");
+  // printf(ESC "[u");
+  printf(ESC "8");
+
+  printf(ESC "7");
+  printf(ESC "[6,15r");
+  printf(ESC "8");
 }
 
 std::span<char> EscapeLine::Input(const char *buf, size_t len) {
