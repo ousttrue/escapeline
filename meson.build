@@ -5,7 +5,7 @@ project(
     default_options: ['cpp_std=c++20'],
 )
 
-srcs = ['main.cpp']
+srcs = ['main.cpp', 'el.cpp',]
 if host_machine.system() == 'windows'
     srcs += [
         'el_term_windows.cpp',
