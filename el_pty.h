@@ -23,6 +23,7 @@ public:
   bool ForkDefault();
   bool Fork(const std::vector<std::string> &args);
   void BlockProcess();
+  void SetSize(const RowCol &size);
 };
 
 } // namespace el

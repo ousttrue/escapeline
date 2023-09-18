@@ -179,6 +179,13 @@ struct PtyImpl {
     WaitForSingleObject(Pi.hProcess, INFINITE);
     std::cout << NEWLINE << "process: exited" << NEWLINE;
   }
+
+  void SetSize(const RowCol &size) {
+    ResizePseudoConsole(Console, {
+                                     .X = size.Col,
+                                     .Y = size.Row,
+                                 });
+  }
 };
 
 Pty::Pty() : m_impl(new PtyImpl) {}
@@ -212,5 +219,7 @@ bool Pty::ForkDefault() {
 }
 
 void Pty::BlockProcess() { m_impl->BlockProcess(); }
+
+void Pty::SetSize(const RowCol &size) { m_impl->SetSize(size); }
 
 } // namespace el

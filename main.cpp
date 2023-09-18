@@ -35,6 +35,8 @@ uv_pipe_t ptyin_pipe;
 uv_pipe_t ptyout_pipe;
 uv_tty_t tty_out;
 
+uv_signal_t signal_resize;
+
 static void alloc_buffer(uv_handle_t *handle, size_t suggested_size,
                          uv_buf_t *buf) {
   *buf = uv_buf_init((char *)malloc(suggested_size), suggested_size);
@@ -67,7 +69,7 @@ int Run(const cxxopts::ParseResult &result) {
   //           << "cols: " << size.Col << std::endl;
 
   // status line !
-  size.Row -= 2;
+  // size.Row -= 2;
 
   // pty
   g_pty = el::Pty::Create(size);
@@ -93,7 +95,7 @@ int Run(const cxxopts::ParseResult &result) {
   }
 
   // status line !
-  printf("\033[%d,%dr", 0, size.Row);
+  // printf("\033[%d,%dr", 0, size.Row);
 
   uv_work_t work;
   uv_queue_work(
@@ -107,10 +109,8 @@ int Run(const cxxopts::ParseResult &result) {
         g_pty = nullptr;
 
         uv_read_stop((uv_stream_t *)&ptyout_pipe);
-        // uv_close((uv_handle_t *)&tty_out, NULL);
-
         uv_read_stop((uv_stream_t *)&tty_in);
-        // uv_close((uv_handle_t *)&ptyin_pipe, NULL);
+        uv_signal_stop(&signal_resize);
       });
 
   // stdin ==> ptyin,
@@ -165,7 +165,16 @@ int Run(const cxxopts::ParseResult &result) {
           free(buf->base);
       });
 
-  // TODO: resize event, signal, timer...
+  uv_signal_init(uv_default_loop(), &signal_resize);
+  uv_signal_start(
+      &signal_resize,
+      [](uv_signal_t *handle, int signum) {
+        auto size = el::GetTermSize();
+        g_pty->SetSize(size);
+      },
+      SIGWINCH);
+
+  // TODO: signal, timer...
   uv_run(uv_default_loop(), UV_RUN_DEFAULT);
   uv_loop_close(uv_default_loop());
 
