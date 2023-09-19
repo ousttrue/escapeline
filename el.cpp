@@ -77,6 +77,19 @@ public:
     assert(end == top);
   }
 
+  int call_timer() {
+    auto top = lua_gettop(L);
+    lua_getglobal(L, "el");
+    lua_getfield(L, -1, "timer");
+    lua_remove(L, -2);
+    lua_call(L, 0, 1);
+    auto value = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    auto end = lua_gettop(L);
+    assert(end == top);
+    return value;
+  }
+
   const char *call(const char *func, const char *buf, size_t len) {
     auto top = lua_gettop(L);
     lua_getglobal(L, "el");
@@ -118,6 +131,8 @@ struct EscapeLineImpl {
     return size;
   }
 
+  int Timer() { return m_lua.call_timer(); }
+
   std::span<char> Input(const char *buf, size_t len) {
     auto result = m_lua.call("input", buf, len);
     m_buf.assign(result, result + strlen(result));
@@ -140,6 +155,8 @@ RowCol EscapeLine::Initialize(int height, std::string_view lua_file) {
 }
 
 RowCol EscapeLine::Update() { return m_impl->Update(); }
+
+int EscapeLine::Timer() { return m_impl->Timer(); }
 
 std::span<char> EscapeLine::Input(const char *buf, size_t len) {
   return m_impl->Input(buf, len);

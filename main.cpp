@@ -14,6 +14,7 @@ uv_pipe_t g_ptyout_pipe;
 uv_tty_t g_tty_out;
 
 uv_signal_t g_signal_resize;
+uv_timer_t g_timer;
 
 el::EscapeLine g_el;
 
@@ -82,6 +83,7 @@ int Run(const cxxopts::ParseResult &result) {
         uv_read_stop((uv_stream_t *)&g_ptyout_pipe);
         uv_read_stop((uv_stream_t *)&g_tty_in);
         uv_signal_stop(&g_signal_resize);
+        uv_timer_stop(&g_timer);
       });
 
   // stdin ==> ptyin,
@@ -147,7 +149,17 @@ int Run(const cxxopts::ParseResult &result) {
       },
       SIGWINCH);
 
-  // TODO: signal, timer...
+  uv_timer_init(uv_default_loop(), &g_timer);
+  uv_timer_start(
+      &g_timer,
+      [](uv_timer_t *handle) {
+        if (g_pty) {
+          auto interval = g_el.Timer();
+          uv_timer_set_repeat(handle, interval);
+        }
+      },
+      0, 500);
+
   uv_run(uv_default_loop(), UV_RUN_DEFAULT);
   uv_loop_close(uv_default_loop());
 
